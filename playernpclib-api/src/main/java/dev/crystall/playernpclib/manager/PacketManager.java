@@ -1,47 +1,25 @@
 package dev.crystall.playernpclib.manager;
 
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ANIMATION;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ENTITY_DESTROY;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ENTITY_EQUIPMENT;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ENTITY_HEAD_ROTATION;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ENTITY_METADATA;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_ENTITY_TELEPORT;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_NAMED_ENTITY_SPAWN;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_PLAYER_INFO;
-import static dev.crystall.playernpclib.wrapper.WrapperFactory.BASE_WRAPPER_PLAY_SERVER_SCOREBOARD_TEAM;
-
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.EnumWrappers.EntityPose;
 import com.comphenix.protocol.wrappers.EnumWrappers.ItemSlot;
-import com.comphenix.protocol.wrappers.EnumWrappers.NativeGameMode;
-import com.comphenix.protocol.wrappers.EnumWrappers.PlayerInfoAction;
 import com.comphenix.protocol.wrappers.Pair;
-import com.comphenix.protocol.wrappers.PlayerInfoData;
-import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher.WrappedDataWatcherObject;
 import dev.crystall.playernpclib.Constants;
 import dev.crystall.playernpclib.PlayerNPCLib;
 import dev.crystall.playernpclib.api.base.BasePlayerNPC;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerAnimation;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerEntityDestroy;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerEntityEquipment;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerEntityHeadRotation;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerEntityMetadata;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerEntityTeleport;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerNamedEntitySpawn;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerPlayerInfo;
-import dev.crystall.playernpclib.wrapper.BaseWrapperPlayServerScoreboardTeam;
-import dev.crystall.playernpclib.wrapper.TeamMode;
-import dev.crystall.playernpclib.wrapper.WrapperGenerator;
+import dev.crystall.playernpclib.wrapper.*;
+import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Team.OptionStatus;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Collections;
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.scoreboard.Team.OptionStatus;
+
+import static dev.crystall.playernpclib.wrapper.WrapperFactory.*;
 
 /**
  * Created by CrystallDEV on 01/09/2020
@@ -77,7 +55,6 @@ public class PacketManager {
    */
   public static void sendNPCCreatePackets(Player player, BasePlayerNPC npc) {
     // Add entity to player list
-    sendPlayerInfoPacket(player, npc, PlayerInfoAction.ADD_PLAYER);
 
     // Spawn entity
     BaseWrapperPlayServerNamedEntitySpawn spawnWrapper = new WrapperGenerator<BaseWrapperPlayServerNamedEntitySpawn>().map(
@@ -91,7 +68,6 @@ public class PacketManager {
 
     sendHeadRotationPacket(player, npc);
 
-    Bukkit.getScheduler().runTaskLater(PlayerNPCLib.getPlugin(), () -> sendPlayerInfoPacket(player, npc, PlayerInfoAction.REMOVE_PLAYER), 20L);
   }
 
   /**
@@ -128,7 +104,6 @@ public class PacketManager {
     sendPacket(player, spawnWrapper.getHandle(), false);
 
     // Remove player from tab list if its still on there
-    sendPlayerInfoPacket(player, npc, PlayerInfoAction.REMOVE_PLAYER);
   }
 
   /**
@@ -148,20 +123,6 @@ public class PacketManager {
     }
   }
 
-  /**
-   * Sends packets to either add or remove the given npc for the given player from the tablist
-   *
-   * @param player
-   * @param npc
-   * @param action
-   */
-  public static void sendPlayerInfoPacket(Player player, BasePlayerNPC npc, PlayerInfoAction action) {
-    BaseWrapperPlayServerPlayerInfo infoWrapper = new WrapperGenerator<BaseWrapperPlayServerPlayerInfo>().map(BASE_WRAPPER_PLAY_SERVER_PLAYER_INFO);
-    PlayerInfoData data = new PlayerInfoData(npc.getGameProfile(), 1, NativeGameMode.SURVIVAL, WrappedChatComponent.fromText(npc.getDisplayName()));
-    infoWrapper.setData(Collections.singletonList(data));
-    infoWrapper.setAction(action);
-    sendPacket(player, infoWrapper.getHandle(), false);
-  }
 
   public static void sendEquipmentPackets(Player player, BasePlayerNPC npc) {
     BaseWrapperPlayServerEntityEquipment wrapper = new WrapperGenerator<BaseWrapperPlayServerEntityEquipment>().map(BASE_WRAPPER_PLAY_SERVER_ENTITY_EQUIPMENT);
@@ -206,12 +167,16 @@ public class PacketManager {
    * @param packetContainer
    */
   private static void sendPacket(Player player, PacketContainer packetContainer, boolean debug) {
-    ProtocolLibrary.getProtocolManager().sendServerPacket(player, packetContainer);
+    try {
+      ProtocolLibrary.getProtocolManager().sendServerPacket(player, packetContainer);
 
-    if (debug) {
-      PlayerNPCLib.getPlugin().getServer().getConsoleSender().sendMessage(
-        "Sent packet " + packetContainer.getType().name() + " to " + player.getDisplayName()
-      );
+      if (debug) {
+        PlayerNPCLib.getPlugin().getServer().getConsoleSender().sendMessage(
+                "Sent packet " + packetContainer.getType().name() + " to " + player.getDisplayName()
+        );
+      }
+    }catch (InvocationTargetException e) {
+      e.printStackTrace();
     }
   }
 
