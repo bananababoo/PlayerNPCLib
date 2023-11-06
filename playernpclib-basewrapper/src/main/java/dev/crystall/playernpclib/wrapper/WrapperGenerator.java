@@ -21,6 +21,7 @@ public class WrapperGenerator<T> {
       return aClass.getDeclaredConstructor(types).newInstance(initargs);
     } catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
       Bukkit.getLogger().severe("Unable to map class " + aClass.getSimpleName());
+      e.printStackTrace();
     }
     return null;
   }
