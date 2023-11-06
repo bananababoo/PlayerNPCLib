@@ -167,17 +167,13 @@ public class PacketManager {
    * @param packetContainer
    */
   private static void sendPacket(Player player, PacketContainer packetContainer, boolean debug) {
-    try {
       ProtocolLibrary.getProtocolManager().sendServerPacket(player, packetContainer);
-
       if (debug) {
         PlayerNPCLib.getPlugin().getServer().getConsoleSender().sendMessage(
                 "Sent packet " + packetContainer.getType().name() + " to " + player.getDisplayName()
         );
       }
-    }catch (InvocationTargetException e) {
-      e.printStackTrace();
-    }
+
   }
 
 }
